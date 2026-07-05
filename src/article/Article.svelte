@@ -17,7 +17,6 @@
     border-bottom: 2px solid #3273dc;
     padding-bottom: 8px;
   }
-
   .article-container p {
     margin: 12px 0;
     text-align: justify;
@@ -51,148 +50,143 @@
     line-height: 1.6;
     color: #333;
   }
-
 </style>
 
 <div class="article-container">
-  <h2>What is YOLO?</h2>
+  <h2>什么是 YOLO？</h2>
   <p>
-    <strong>YOLO (You Only Look Once)</strong> is a state-of-the-art, real-time object detection system.
-    Unlike traditional object detection approaches that repurpose classifiers to perform detection
-    (running a classifier at various locations and scales), YOLO frames object detection as a
-    <strong>single regression problem</strong> — straight from image pixels to bounding box coordinates
-    and class probabilities.
+    <strong>YOLO（You Only Look Once）</strong> 是一种先进的实时目标检测系统。
+    传统目标检测方法将分类器改造为检测器（在不同位置和尺度上运行分类器），
+    而 YOLO 将目标检测定义为一个<strong>单一的回归问题</strong>——
+    直接从图像像素映射到边界框坐标和类别概率。
   </p>
 
   <div class="highlight-box">
-    <strong>Key Insight:</strong> With YOLO, you only look once (one forward pass) at an image to
-    predict what objects are present and where they are. The entire detection pipeline is a single
-    neural network that can be optimized end-to-end.
+    <strong>核心思想：</strong>使用 YOLO，你只需"看一眼"（一次前向传播）图像，
+    就能预测出图像中存在哪些物体及其位置。整个检测流水线是一个可以端到端优化的单一神经网络。
   </div>
 
-  <h2>The Unified Detection Pipeline</h2>
+  <h2>统一的检测流水线</h2>
   <p>
-    YOLO unifies the separate components of object detection into a single neural network. The process
-    is remarkably simple:
+    YOLO 将目标检测的各个独立组件统一为一个单一的神经网络。流程异常简洁：
   </p>
   <ol>
-    <li><strong>Resize</strong> the input image to 448×448 pixels.</li>
-    <li>Run a single <strong>convolutional network</strong> on the image.</li>
-    <li><strong>Threshold</strong> the resulting detections by the model's confidence scores.</li>
+    <li><strong>调整大小</strong> — 将输入图像调整为 448×448 像素。</li>
+    <li><strong>运行卷积网络</strong> — 在图像上执行一次前向传播。</li>
+    <li><strong>阈值筛选</strong> — 根据模型输出的置信度分数筛选检测结果。</li>
   </ol>
 
-  <h2>The S×S Grid System</h2>
+  <h2>S×S 网格系统</h2>
   <p>
-    The core innovation of YOLO is how it divides the image. YOLO partitions the input image into an
-    <strong>S × S grid</strong>. For PASCAL VOC, S = 7, so there are 49 grid cells.
+    YOLO 的核心创新在于它对图像的分割方式。YOLO 将输入图像划分为一个
+    <strong>S × S 网格</strong>。在 PASCAL VOC 数据集上，S = 7，即共有 49 个网格单元格。
   </p>
   <p>
-    If the <strong>center of an object</strong> falls into a grid cell, that grid cell is responsible
-    for detecting that object. Each grid cell predicts:
-  </p>
-  <ul>
-    <li><strong>B</strong> bounding boxes (coordinates + confidence)</li>
-    <li><strong>C</strong> conditional class probabilities (one set per cell, not per box)</li>
-  </ul>
-
-  <h2>Bounding Box Predictions</h2>
-  <p>
-    Each of the <strong>B = 2</strong> bounding boxes per cell consists of <strong>5 predictions</strong>:
+    如果一个物体的<strong>中心</strong>落入某个网格单元格，该单元格就负责检测这个物体。
+    每个网格单元格预测：
   </p>
   <ul>
-    <li><strong>x, y</strong> — center of the box relative to the grid cell bounds (0 to 1)</li>
-    <li><strong>w, h</strong> — width and height relative to the whole image (0 to 1)</li>
-    <li><strong>confidence</strong> — Pr(Object) × IoU(pred, truth) — how confident the model is
-    that the box contains an object and how accurate it thinks the box is</li>
+    <li><strong>B</strong> 个边界框（坐标 + 置信度）</li>
+    <li><strong>C</strong> 个条件类别概率（每个单元格一组，而非每个框一组）</li>
   </ul>
 
-  <h2>Class Predictions</h2>
+  <h2>边界框预测</h2>
   <p>
-    Each grid cell predicts <strong>C conditional class probabilities</strong>,
-    Pr(Class<sub>i</sub> | Object). On PASCAL VOC, C = 20 classes. Only <strong>one</strong> set of
-    class probabilities is predicted per grid cell, regardless of the number of boxes B.
+    每个单元格的 <strong>B = 2</strong> 个边界框各包含 <strong>5 个预测值</strong>：
+  </p>
+  <ul>
+    <li><strong>x, y</strong> — 框中心相对于网格单元格边界的偏移量（0 到 1）</li>
+    <li><strong>w, h</strong> — 框的宽度和高度相对于整张图像的比例（0 到 1）</li>
+    <li><strong>confidence（置信度）</strong> — Pr(Object) × IoU(pred, truth)，
+    表示模型对框内含有物体的确信程度以及框的准确度</li>
+  </ul>
+
+  <h2>类别预测</h2>
+  <p>
+    每个网格单元格预测 <strong>C 个条件类别概率</strong> Pr(Class<sub>i</sub> | Object)。
+    在 PASCAL VOC 上，C = 20 个类别。每个网格单元格<strong>只</strong>预测一组类别概率，
+    与边界框数量 B 无关。
   </p>
   <p>
-    At test time, the conditional class probabilities and the individual box confidence predictions
-    are multiplied:
+    在测试时，条件类别概率与每个框的置信度相乘：
   </p>
   <div class="formula">
     Pr(Class<sub>i</sub> | Object) × Pr(Object) × IoU<sup>truth</sup><sub>pred</sub>
     = Pr(Class<sub>i</sub>) × IoU<sup>truth</sup><sub>pred</sub>
   </div>
   <p>
-    This gives <strong>class-specific confidence scores</strong> for each box, encoding both the
-    probability of that class appearing in the box and how well the box fits the object.
+    这样就得到了每个框的<strong>类别特定置信度分数</strong>，
+    同时编码了该类别出现在框中的概率和框与物体的匹配程度。
   </p>
 
-  <h2>Output Tensor</h2>
+  <h2>输出张量</h2>
   <p>
-    The final prediction is a <strong>7 × 7 × 30 tensor</strong>:
+    最终预测是一个 <strong>7 × 7 × 30 的张量</strong>：
   </p>
   <div class="formula">
     S × S × (B × 5 + C) = 7 × 7 × (2 × 5 + 20) = 7 × 7 × 30
   </div>
   <p>
-    For each of the 49 grid cells, the 30 values encode:
-    Box 1 (x, y, w, h, conf) + Box 2 (x, y, w, h, conf) + 20 class probabilities.
+    对于 49 个网格单元格中的每一个，30 个值的编码方式为：
+    框 1（x, y, w, h, 置信度）+ 框 2（x, y, w, h, 置信度）+ 20 个类别概率。
   </p>
 
-  <h2>Network Architecture</h2>
+  <h2>网络架构</h2>
   <p>
-    YOLO's architecture is inspired by GoogLeNet. It has <strong>24 convolutional layers</strong>
-    followed by <strong>2 fully connected layers</strong>:
+    YOLO 的架构受 GoogLeNet 启发，包含 <strong>24 个卷积层</strong>后接
+    <strong>2 个全连接层</strong>：
   </p>
   <ul>
-    <li>Uses 1×1 reduction layers followed by 3×3 convolutional layers (similar to Network in Network)</li>
-    <li>Pre-trained on ImageNet at 224×224 resolution (first 20 conv layers)</li>
-    <li>Fine-tuned for detection at 448×448 resolution</li>
-    <li>Final layer uses <strong>linear activation</strong>; all other layers use <strong>leaky ReLU</strong>
-    (φ(x) = x if x &gt; 0, else 0.1x)</li>
+    <li>使用 1×1 降维层后接 3×3 卷积层（类似于 Network in Network）</li>
+    <li>在 ImageNet 上以 224×224 分辨率预训练（前 20 个卷积层）</li>
+    <li>以 448×448 分辨率微调用于检测任务</li>
+    <li>最后一层使用<strong>线性激活函数</strong>；其余所有层使用
+    <strong>Leaky ReLU</strong>（φ(x) = x 若 x &gt; 0，否则为 0.1x）</li>
   </ul>
 
   <p>
-    A faster version, <strong>Fast YOLO</strong>, uses only <strong>9 convolutional layers</strong>
-    with fewer filters, achieving 155 FPS while still being twice as accurate as other real-time detectors.
+    更快速的版本 <strong>Fast YOLO</strong> 仅使用 <strong>9 个卷积层</strong>和更少的滤波器，
+    达到了 155 FPS，同时准确率仍然是其他实时检测器的两倍。
   </p>
 
-  <h2>Loss Function</h2>
+  <h2>损失函数</h2>
   <p>
-    YOLO optimizes a multi-part loss function using sum-squared error:
+    YOLO 使用平方和误差优化一个多部分损失函数：
   </p>
   <div class="formula">
-    Loss = λ<sub>coord</sub> Σ (x − x̂)² + (y − ŷ)²  &lt;-- coordinate loss<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;+ λ<sub>coord</sub> Σ (√w − √ŵ)² + (√h − √ĥ)²  &lt;-- size loss (sqrt for small boxes)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;+ Σ (C − Ĉ)²  &lt;-- confidence loss (objects)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;+ λ<sub>noobj</sub> Σ (C − Ĉ)²  &lt;-- confidence loss (no objects)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;+ Σ Σ (p(c) − p̂(c))²  &lt;-- class loss<br><br>
-    where λ<sub>coord</sub> = 5 (emphasize localization)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;λ<sub>noobj</sub> = 0.5 (de-emphasize background)
+    Loss = λ<sub>coord</sub> Σ (x − x̂)² + (y − ŷ)²  &lt;-- 坐标损失<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;+ λ<sub>coord</sub> Σ (√w − √ŵ)² + (√h − √ĥ)²  &lt;-- 尺寸损失（平方根处理小框）<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;+ Σ (C − Ĉ)²  &lt;-- 包含物体的置信度损失<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;+ λ<sub>noobj</sub> Σ (C − Ĉ)²  &lt;-- 不包含物体的置信度损失<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;+ Σ Σ (p(c) − p̂(c))²  &lt;-- 类别损失<br><br>
+    其中 λ<sub>coord</sub> = 5（强调定位准确性）<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;λ<sub>noobj</sub> = 0.5（降低背景的权重）
   </div>
 
   <div class="highlight-box">
-    <strong>Design Choice:</strong> λ<sub>coord</sub> = 5 increases the penalty for localization errors,
-    while λ<sub>noobj</sub> = 0.5 decreases the penalty for confident background predictions. This
-    prevents the model from being overwhelmed by the many grid cells that don't contain objects.
+    <strong>设计考量：</strong>λ<sub>coord</sub> = 5 增加了定位误差的惩罚，
+    而 λ<sub>noobj</sub> = 0.5 降低了无物体单元格的置信度惩罚。
+    这防止了模型被大量不包含物体的网格单元格所主导。
   </div>
 
-  <h2>Non-Maximum Suppression (NMS)</h2>
+  <h2>非极大值抑制（NMS）</h2>
   <p>
-    While the grid design enforces spatial diversity, large objects or objects near cell borders can
-    be detected by multiple cells. <strong>Non-maximum suppression</strong> removes duplicate detections:
+    虽然网格设计强制了空间多样性，但大物体或靠近边界的物体可能被多个单元格检测到。
+    <strong>非极大值抑制</strong>用于消除重复检测：
   </p>
   <ol>
-    <li>Sort all detection boxes by confidence score (highest first).</li>
-    <li>Select the top box and remove any other box with IoU &gt; 0.5 of the same class.</li>
-    <li>Repeat until all boxes are either selected or suppressed.</li>
+    <li>按置信度分数对所有检测框排序（最高优先）。</li>
+    <li>选取最高分的框，移除同一类中与该框 IoU &gt; 0.5 的其他框。</li>
+    <li>重复上述步骤，直到所有框要么被保留、要么被抑制。</li>
   </ol>
   <p>
-    NMS adds about 2-3% mAP improvement for YOLO (less critical than for R-CNN or DPM).
+    NMS 为 YOLO 带来约 2-3% 的 mAP 提升（对 YOLO 而言不如对 R-CNN 或 DPM 那么关键）。
   </p>
 
-  <h2>Performance</h2>
+  <h2>性能对比</h2>
   <div class="formula" style="font-size:13px;">
     ┌─────────────────────┬──────┬──────┐<br>
-    │ Model               │ mAP  │ FPS  │<br>
+    │ 模型                │ mAP  │ FPS  │<br>
     ├─────────────────────┼──────┼──────┤<br>
     │ Fast YOLO           │ 52.7 │ 155  │<br>
     │ YOLO                │ 63.4 │ 45   │<br>
@@ -201,37 +195,32 @@
     └─────────────────────┴──────┴──────┘
   </div>
   <p>
-    YOLO achieves real-time performance while maintaining competitive accuracy. It makes
-    <strong>fewer background errors</strong> than Fast R-CNN (less than half) but more
-    <strong>localization errors</strong>. When combined with Fast R-CNN, YOLO can boost
-    Fast R-CNN's mAP by 3.2% (from 71.8% to 75.0%).
+    YOLO 在保持有竞争力的准确率的同时实现了实时性能。它产生的
+    <strong>背景误报</strong>比 Fast R-CNN 少得多（不到一半），但<strong>定位误差</strong>更多。
+    当与 Fast R-CNN 结合时，YOLO 可以将其 mAP 提升 3.2%（从 71.8% 到 75.0%）。
   </p>
 
-  <h2>Limitations</h2>
+  <h2>局限性</h2>
   <ul>
-    <li><strong>Spatial constraints:</strong> Each cell predicts only 2 boxes and 1 class, limiting
-    detection of nearby or small objects (e.g., flocks of birds).</li>
-    <li><strong>Generalization:</strong> Struggles with new or unusual aspect ratios since bounding
-    boxes are learned from training data.</li>
-    <li><strong>Coarse features:</strong> Multiple downsampling layers result in relatively coarse
-    features for predicting bounding boxes.</li>
-    <li><strong>Equal error weighting:</strong> Sum-squared error treats small and large boxes
-    equally, though small localization errors in large boxes are less significant.</li>
+    <li><strong>空间约束：</strong>每个单元格只预测 2 个框和 1 个类别，限制了近距离或小物体的检测（如鸟群）。</li>
+    <li><strong>泛化能力：</strong>因为边界框是从训练数据中学习的，所以在新颖或不常见宽高比的目标上表现欠佳。</li>
+    <li><strong>特征粗糙：</strong>多个下采样层导致用于预测边界框的特征相对粗糙。</li>
+    <li><strong>误差均等加权：</strong>平方和误差对小框和大框的误差一视同仁，而大框中小的定位误差实际上影响更小。</li>
   </ul>
 
-  <h2>Conclusion</h2>
+  <h2>总结</h2>
   <p>
-    YOLO introduced a paradigm shift in object detection by framing it as a <strong>single regression
-    problem</strong> rather than a complex pipeline. Its unified architecture enables:
+    YOLO 通过将目标定义为一个<strong>单一的回归问题</strong>而非复杂的多阶段流水线，
+    引入了目标检测领域的范式转变。其统一的架构实现了：
   </p>
   <ul>
-    <li><strong>Extreme speed</strong> — real-time detection at 45-155 FPS</li>
-    <li><strong>Global reasoning</strong> — the entire image is processed at once, encoding context</li>
-    <li><strong>Generalizable representations</strong> — performs well even on artwork and other domains</li>
-    <li><strong>End-to-end training</strong> — directly optimizes detection performance</li>
+    <li><strong>极致的速度</strong> — 以 45-155 FPS 实现实时检测</li>
+    <li><strong>全局推理</strong> — 一次性处理整幅图像，编码上下文信息</li>
+    <li><strong>可泛化的表征</strong> — 即使在艺术作品等其他领域也能有良好表现</li>
+    <li><strong>端到端训练</strong> — 直接优化检测性能</li>
   </ul>
   <p>
-    The "You Only Look Once" philosophy has inspired subsequent generations (YOLOv2, YOLOv3, YOLOv4,
-    and beyond), making it one of the most influential object detection frameworks in computer vision.
+    "You Only Look Once" 的理念启发了后续多代 YOLO 模型（YOLOv2、YOLOv3、YOLOv4 等），
+    使其成为计算机视觉领域最具影响力的目标检测框架之一。
   </p>
 </div>
