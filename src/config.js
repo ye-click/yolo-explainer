@@ -1,0 +1,51 @@
+export const yoloConfig = {
+  S: 7,
+  B: 2,
+  C: 20,
+  inputSize: 448,
+  classNames: [
+    'aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
+    'bus', 'car', 'cat', 'chair', 'cow',
+    'diningtable', 'dog', 'horse', 'motorbike', 'person',
+    'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
+  ],
+  gridColors: [
+    '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
+    '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4',
+    '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000',
+    '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9'
+  ],
+  networkArchitecture: [
+    {type: 'conv', filters: 64, kernel: 7, stride: 2, name: 'Conv 7×7×64'},
+    {type: 'maxpool', kernel: 2, stride: 2, name: 'MaxPool 2×2'},
+    {type: 'conv', filters: 192, kernel: 3, stride: 1, name: 'Conv 3×3×192'},
+    {type: 'maxpool', kernel: 2, stride: 2, name: 'MaxPool 2×2'},
+    {type: 'conv', filters: 128, kernel: 1, stride: 1, name: 'Conv 1×1×128'},
+    {type: 'conv', filters: 256, kernel: 3, stride: 1, name: 'Conv 3×3×256'},
+    {type: 'conv', filters: 256, kernel: 1, stride: 1, name: 'Conv 1×1×256'},
+    {type: 'conv', filters: 512, kernel: 3, stride: 1, name: 'Conv 3×3×512'},
+    {type: 'maxpool', kernel: 2, stride: 2, name: 'MaxPool 2×2'},
+    {type: 'conv', filters: 256, kernel: 1, stride: 1, name: 'Conv 1×1×256'},
+    {type: 'conv', filters: 512, kernel: 3, stride: 1, name: 'Conv 3×3×512'},
+    {type: 'conv', filters: 256, kernel: 1, stride: 1, name: 'Conv 1×1×256'},
+    {type: 'conv', filters: 512, kernel: 3, stride: 1, name: 'Conv 3×3×512'},
+    {type: 'conv', filters: 256, kernel: 1, stride: 1, name: 'Conv 1×1×256'},
+    {type: 'conv', filters: 512, kernel: 3, stride: 1, name: 'Conv 3×3×512'},
+    {type: 'conv', filters: 256, kernel: 1, stride: 1, name: 'Conv 1×1×256'},
+    {type: 'conv', filters: 512, kernel: 3, stride: 1, name: 'Conv 3×3×512'},
+    {type: 'conv', filters: 512, kernel: 1, stride: 1, name: 'Conv 1×1×512'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'maxpool', kernel: 2, stride: 2, name: 'MaxPool 2×2'},
+    {type: 'conv', filters: 512, kernel: 1, stride: 1, name: 'Conv 1×1×512'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'conv', filters: 512, kernel: 1, stride: 1, name: 'Conv 1×1×512'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 2, name: 'Conv 3×3×1024'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'conv', filters: 1024, kernel: 3, stride: 1, name: 'Conv 3×3×1024'},
+    {type: 'fc', size: 4096, name: 'FC 4096'},
+    {type: 'fc', size: 1470, name: 'FC 1470 (7×7×30)'},
+    {type: 'reshape', shape: [7, 7, 30], name: 'Reshape 7×7×30'}
+  ]
+};
