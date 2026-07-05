@@ -23,7 +23,7 @@ export default {
         css.write('bundle.css');
       }
     }),
-    replace({PUBLIC_URL: production ? '/yolo-explainer' : ''}),
+    replace({PUBLIC_URL: production ? '/yolo-explainer' : '', preventAssignment: true}),
     resolve({
       browser: true,
       dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/')

@@ -1,18 +1,30 @@
 import { yoloConfig } from '../config.js';
 
-const { S, B, C } = yoloConfig;
+const { S, B, C, classNames } = yoloConfig;
+
+// Predefined object configurations for each image context
+const sceneObjects = {
+  dog:  [{ row: 3, col: 3, classIdx: 11, dx: 0.0, dy: 0.0, w: 0.30, h: 0.32, conf: 0.92 }],
+  car:  [{ row: 4, col: 2, classIdx: 6,  dx: 0.0, dy: 0.0, w: 0.35, h: 0.22, conf: 0.90 }],
+  person: [{ row: 3, col: 4, classIdx: 14, dx: 0.0, dy: 0.0, w: 0.18, h: 0.35, conf: 0.88 }],
+  street: [
+    { row: 4, col: 1, classIdx: 6,  dx: 0.1, dy: 0.2, w: 0.28, h: 0.18, conf: 0.90 },
+    { row: 3, col: 5, classIdx: 14, dx: 0.3, dy: -0.1, w: 0.15, h: 0.32, conf: 0.88 },
+    { row: 1, col: 3, classIdx: 11, dx: -0.15, dy: 0.1, w: 0.22, h: 0.20, conf: 0.85 },
+  ]
+};
 
 /**
  * Generate a simulated YOLO output tensor for demonstration.
  * Creates a 7×7×30 tensor with realistic-ish values.
- * For a real system, this would come from running the actual YOLO model.
  */
 export function generateYOLOOutput(imageContext = 'medium') {
+  const objects = sceneObjects[imageContext] || sceneObjects.dog;
   const tensor = [];
   for (let i = 0; i < S; i++) {
     const row = [];
     for (let j = 0; j < S; j++) {
-      const cell = generateCellPredictions(i, j, imageContext);
+      const cell = generateCellPredictions(i, j, objects);
       row.push(cell);
     }
     tensor.push(row);
@@ -20,28 +32,32 @@ export function generateYOLOOutput(imageContext = 'medium') {
   return tensor;
 }
 
-function generateCellPredictions(row, col, context) {
+function generateCellPredictions(row, col, objects) {
   // Each cell: B boxes (each with x, y, w, h, confidence) + C class probs
   // = 2 * 5 + 20 = 30 values
 
-  // Simulate where objects might be
-  const centerRow = context === 'dog' ? 3 : context === 'car' ? 4 : 3;
-  const centerCol = context === 'dog' ? 3 : context === 'car' ? 2 : 4;
+  // Find nearest object
+  let nearestObj = null, nearestDist = Infinity;
+  for (const obj of objects) {
+    const d = Math.abs(row - obj.row) + Math.abs(col - obj.col);
+    if (d < nearestDist) { nearestDist = d; nearestObj = obj; }
+  }
 
-  const isObjectCell = Math.abs(row - centerRow) <= 1 && Math.abs(col - centerCol) <= 1;
-  const isCenterCell = row === centerRow && col === centerCol;
+  const isCenterCell = nearestObj && row === nearestObj.row && col === nearestObj.col;
+  const isObjectCell = nearestObj && nearestDist <= 1 && nearestObj.conf > 0.2;
 
   const predictions = [];
 
-  // Box 1
   if (isCenterCell) {
-    predictions.push(0.5, 0.5, 0.3, 0.4, 0.92); // good box
-    predictions.push(0.48, 0.52, 0.28, 0.38, 0.85); // slightly offset box
+    const dx = nearestObj.dx || 0, dy = nearestObj.dy || 0;
+    predictions.push(0.5 + dx, 0.5 + dy, nearestObj.w, nearestObj.h, nearestObj.conf);
+    predictions.push(0.48 + dx, 0.52 + dy, nearestObj.w * 0.9, nearestObj.h * 0.9, nearestObj.conf * 0.9);
   } else if (isObjectCell) {
-    const dx = (col - centerCol) * 0.15;
-    const dy = (row - centerRow) * 0.15;
-    predictions.push(0.5 + dx, 0.5 + dy, 0.25, 0.35, 0.6);
-    predictions.push(0.5 + dx, 0.5 + dy, 0.35, 0.3, 0.4);
+    const dr = row - nearestObj.row, dc = col - nearestObj.col;
+    const dx = dc * 0.12 + (nearestObj.dx || 0);
+    const dy = dr * 0.12 + (nearestObj.dy || 0);
+    predictions.push(0.5 + dx, 0.5 + dy, nearestObj.w * 0.8, nearestObj.h * 0.8, nearestObj.conf * 0.6);
+    predictions.push(0.5 + dx, 0.5 + dy, nearestObj.w * 0.7, nearestObj.h * 0.7, nearestObj.conf * 0.4);
   } else {
     predictions.push(0.5, 0.5, 0.1, 0.1, 0.05);
     predictions.push(0.5, 0.5, 0.1, 0.1, 0.03);
@@ -49,14 +65,19 @@ function generateCellPredictions(row, col, context) {
 
   // Class probabilities (20 classes)
   const classProbs = new Array(C).fill(0.01);
-  if (isObjectCell) {
-    // If context is dog, make class 12 (dog) have high prob
-    const classIdx = context === 'dog' ? 12 : context === 'car' ? 6 : 7;
-    classProbs[classIdx] = 0.85;
-    if (isCenterCell) classProbs[classIdx] = 0.95;
-    // Some noise in related classes
-    classProbs[classIdx + 1] = 0.1;
-    classProbs[classIdx - 1] = 0.08;
+  if (nearestObj && isObjectCell) {
+    classProbs[nearestObj.classIdx] = isCenterCell ? 0.95 : 0.75;
+    const nearbyClasses = [nearestObj.classIdx + 1, nearestObj.classIdx - 1]
+      .filter(idx => idx >= 0 && idx < C);
+    nearbyClasses.forEach(idx => { classProbs[idx] = 0.12; });
+  }
+  // For multi-object scenes, give partial probability to other object classes
+  if (objects.length > 1 && !isObjectCell) {
+    for (const obj of objects) {
+      if (obj !== nearestObj && Math.abs(row - obj.row) <= 2 && Math.abs(col - obj.col) <= 2) {
+        classProbs[obj.classIdx] = Math.max(classProbs[obj.classIdx], 0.08);
+      }
+    }
   }
 
   return [...predictions, ...classProbs];
