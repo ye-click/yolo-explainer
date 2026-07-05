@@ -5,9 +5,7 @@
     yoloStore, svgStore, selectedGridCell, hoverInfoStore,
     selectedImageStore, detectionResults, showNMSStore
   } from '../stores.js';
-  import GridCellView from '../detail-view/GridCellView.svelte';
   import NetworkView from '../detail-view/NetworkView.svelte';
-  import NMSView from '../detail-view/NMSView.svelte';
   import Article from '../article/Article.svelte';
 
   import {
@@ -16,7 +14,8 @@
   } from '../utils/yolo.js';
   import {
     drawGrid, highlightCell, drawBoxes, drawClassProbabilities,
-    drawNetworkArchitecture, drawOutputTensor
+    drawNetworkArchitecture, drawOutputTensor, drawInputImage,
+    animateGridAppear, animateBoxesAppear
   } from './grid-draw.js';
 
   const { S, B, C, classNames, gridColors } = yoloConfig;
@@ -30,14 +29,14 @@
   let selectedRow = -1, selectedCol = -1;
   let selectedCellBoxes = [];
   let selectedCellClasses = [];
-  let imageWidth = 350, imageHeight = 350;
-  let viewMode = 'overview'; // 'overview', 'grid', 'network', 'nms', 'tensor'
+  let imageWidth = 400, imageHeight = 400;
+  let viewMode = 'overview';
   let showArticle = true;
 
   const imageOptions = [
-    {file: 'dog.jpg', class: 'dog', label: 'Dog'},
-    {file: 'car.jpg', class: 'car', label: 'Car'},
-    {file: 'person.jpg', class: 'person', label: 'Person'}
+    {file: 'dog.svg', class: 'dog', label: '狗'},
+    {file: 'car.svg', class: 'car', label: '汽车'},
+    {file: 'person.svg', class: 'person', label: '人'}
   ];
   let selectedImage = imageOptions[0];
 
@@ -88,32 +87,13 @@
 
     svg.selectAll('*').remove();
 
-    // Draw input image placeholder
-    const imgGroup = svg.append('g').attr('class', 'image-group');
-    imgGroup.append('rect')
-      .attr('class', 'image-bg')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', imageWidth)
-      .attr('height', imageHeight)
-      .style('fill', '#e8e8e8')
-      .style('stroke', '#ccc')
-      .style('stroke-width', 1)
-      .style('rx', 4);
-
-    imgGroup.append('text')
-      .attr('x', imageWidth / 2)
-      .attr('y', imageHeight / 2)
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'middle')
-      .style('font-size', '16px')
-      .style('fill', '#999')
-      .style('font-style', 'italic')
-      .text(`Input Image ${imageWidth}×${imageWidth}`);
+    const imgSrc = `PUBLIC_URL/assets/img/${selectedImage.file}`;
+    drawInputImage(svg, imgSrc, imageWidth, imageHeight);
 
     if (viewMode === 'overview' || viewMode === 'grid') {
       drawGrid(svg, imageWidth, imageHeight, imageWidth, imageHeight,
         handleCellClick, handleCellHover, handleCellLeave);
+      animateGridAppear(svg);
     }
 
     if (viewMode === 'nms' || viewMode === 'overview') {
@@ -122,6 +102,7 @@
         ...suppressedBoxes.map(b => ({...b, suppressed: true}))
       ];
       drawBoxes(svg, allBoxesMarked, imageWidth, imageHeight);
+      animateBoxesAppear(svg, imageWidth, imageHeight);
     }
 
     if (viewMode === 'overview' && selectedRow >= 0) {
@@ -152,13 +133,13 @@
     flex-direction: column;
   }
   .control-container {
-    padding: 8px 20px;
+    padding: 12px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     background: #fff;
     border-bottom: 1px solid #eee;
   }
@@ -166,77 +147,81 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 10px;
   }
   .right-control {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
   .image-container {
-    width: 44px;
-    height: 44px;
-    border-radius: 4px;
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 2.5px solid #1E1E1E;
+    border: 3px solid #1E1E1E;
     cursor: pointer;
-    transition: border 300ms ease-in-out, opacity 300ms ease-in-out;
-    background: #f0f0f0;
-    font-size: 10px;
-    color: #555;
-    text-align: center;
+    transition: all 300ms ease;
+    background: #fff;
     overflow: hidden;
+    padding: 4px;
+  }
+  .image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
   .image-container.inactive {
-    border: 2.5px solid rgb(220, 220, 220);
+    border: 3px solid #ddd;
     opacity: 0.5;
   }
   .image-container.inactive:hover {
-    opacity: 0.8;
-    border: 2.5px solid #1E1E1E;
+    opacity: 0.85;
+    border-color: #1E1E1E;
   }
   .main-area {
     display: flex;
     flex-direction: row;
-    padding: 15px 20px;
-    gap: 20px;
+    padding: 20px 24px;
+    gap: 24px;
     flex-wrap: wrap;
   }
   .vis-area {
     flex: 1;
-    min-width: 380px;
+    min-width: 420px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
   .info-area {
-    width: 320px;
-    min-width: 280px;
+    width: 360px;
+    min-width: 300px;
   }
   svg#yolo-svg {
     width: 100%;
-    max-width: 650px;
+    max-width: 700px;
     height: auto;
-    min-height: 400px;
+    min-height: 450px;
     background: #fafafa;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
   .view-tabs {
     display: flex;
     gap: 4px;
-    margin-bottom: 10px;
     flex-wrap: wrap;
   }
   .tab-btn {
-    padding: 5px 12px;
-    font-size: 12px;
+    padding: 7px 16px;
+    font-size: 14px;
     border: 1px solid #ddd;
     background: #fff;
     border-radius: 4px;
     cursor: pointer;
     transition: all 200ms;
+    font-weight: 500;
   }
   .tab-btn:hover {
     background: #f0f0f0;
@@ -248,79 +233,85 @@
   }
   .cell-detail-panel {
     background: #fff;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    padding: 12px;
-    font-size: 13px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 15px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .cell-detail-panel h4 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #333;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #222;
   }
   .box-info {
-    background: #f8f8f8;
-    border-radius: 4px;
-    padding: 8px;
-    margin-bottom: 8px;
-    font-size: 12px;
+    background: #f5f7fa;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    border-left: 3px solid #3273dc;
   }
   .box-info strong {
     color: #3273dc;
+    font-size: 14px;
   }
   .class-list {
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
   }
   .class-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 0;
-    font-size: 11px;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 13px;
   }
   .class-bar-bg {
-    height: 14px;
+    height: 16px;
     background: #eee;
-    border-radius: 3px;
+    border-radius: 4px;
     flex: 1;
     overflow: hidden;
   }
   .class-bar-fill {
     height: 100%;
-    border-radius: 3px;
-    transition: width 300ms;
+    border-radius: 4px;
+    transition: width 400ms ease;
   }
   .class-name {
-    width: 75px;
+    width: 85px;
     text-align: right;
-    color: #555;
+    color: #444;
+    font-size: 13px;
   }
   .class-val {
-    width: 35px;
+    width: 40px;
     text-align: right;
     color: #888;
-    font-size: 10px;
+    font-size: 11px;
   }
   .stats-panel {
     background: #fff;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    padding: 12px;
-    margin-top: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .stats-panel h4 {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #222;
   }
   .stat-row {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
-    padding: 3px 0;
-    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f0f0f0;
   }
   :global(.hidden) {
     opacity: 0;
@@ -331,6 +322,7 @@
 <div class="overview" bind:this={overviewComponent}>
   <div class="control-container">
     <div class="left-control">
+      <span style="font-size:15px;font-weight:600;color:#555;margin-right:6px;">输入图片:</span>
       {#each imageOptions as img}
         <div class="image-container"
           class:inactive={selectedImage.file !== img.file}
@@ -339,12 +331,12 @@
           role="button"
           tabindex="0"
           title="{img.class}">
-          <span>{img.label}</span>
+          <img src="PUBLIC_URL/assets/img/{img.file}" alt="{img.class}"/>
         </div>
       {/each}
 
-      <button class="button is-very-small is-link is-light"
-        style="opacity:{hoverInfoStore.show ? 1 : 0}; transition: opacity 300ms;">
+      <button class="button is-small is-link is-light"
+        style="opacity:{hoverInfoStore.show ? 1 : 0}; transition: opacity 300ms; font-size:13px;">
         <span class="icon is-small"><i class="fas fa-crosshairs"></i></span>
         <span>{hoverInfoStore.text}</span>
       </button>
@@ -353,9 +345,9 @@
     <div class="right-control">
       <div class="view-tabs">
         <button class="tab-btn" class:active={viewMode === 'overview'}
-          on:click={() => switchMode('overview')}>Overview</button>
+          on:click={() => switchMode('overview')}>总览</button>
         <button class="tab-btn" class:active={viewMode === 'grid'}
-          on:click={() => switchMode('grid')}>Grid</button>
+          on:click={() => switchMode('grid')}>网格</button>
         <button class="tab-btn" class:active={viewMode === 'nms'}
           on:click={() => switchMode('nms')}>NMS</button>
       </div>
@@ -367,27 +359,27 @@
       <svg id="yolo-svg"></svg>
 
       {#if yoloOutput}
-        <div class="stats-panel">
-          <h4>Detection Stats</h4>
+        <div class="stats-panel" style="width:100%;max-width:700px;">
+          <h4>检测统计</h4>
           <div class="stat-row">
-            <span>Total boxes (before NMS):</span>
+            <span>检测框总数（NMS 前）:</span>
             <strong>{allBoxes.length}</strong>
           </div>
           <div class="stat-row">
-            <span>Kept (after NMS):</span>
+            <span>保留（NMS 后）:</span>
             <strong style="color:#27ae60">{keptBoxes.length}</strong>
           </div>
           <div class="stat-row">
-            <span>Suppressed:</span>
+            <span>抑制（重复框）:</span>
             <strong style="color:#e74c3c">{suppressedBoxes.length}</strong>
           </div>
           <div class="stat-row">
-            <span>Grid:</span>
-            <strong>{S}×{S} = {S*S} cells</strong>
+            <span>网格:</span>
+            <strong>{S}×{S} = {S*S} 个单元格</strong>
           </div>
           <div class="stat-row">
-            <span>Output tensor:</span>
-            <strong>{S}×{S}×{B*5+C} = {S*S*(B*5+C)} values</strong>
+            <span>输出张量:</span>
+            <strong>{S}×{S}×{B*5+C} = {S*S*(B*5+C)} 个值</strong>
           </div>
         </div>
       {/if}
@@ -396,22 +388,22 @@
     <div class="info-area">
       {#if selectedRow >= 0 && yoloOutput}
         <div class="cell-detail-panel">
-          <h4>Grid Cell ({selectedRow}, {selectedCol})</h4>
+          <h4>网格单元格 ({selectedRow}, {selectedCol})</h4>
 
-          <p style="font-size:12px;color:#666;margin-bottom:8px;">
-            <strong>{B} bounding box predictions</strong> · <strong>{C} class probabilities</strong>
+          <p style="font-size:14px;color:#555;margin-bottom:10px;">
+            <strong style="color:#3273dc">{B} 个边界框预测</strong> · <strong style="color:#3273dc">{C} 个类别概率</strong>
           </p>
 
           {#each selectedCellBoxes as box, i}
             <div class="box-info">
-              <strong>Box {i + 1}:</strong>
-              x={box.x.toFixed(2)}, y={box.y.toFixed(2)},
-              w={box.w.toFixed(2)}, h={box.h.toFixed(2)},
-              conf={box.confidence.toFixed(2)}
+              <strong>框 {i + 1}</strong>
+              <span style="color:#555;"> x={box.x.toFixed(3)} y={box.y.toFixed(3)} w={box.w.toFixed(3)} h={box.h.toFixed(3)}</span>
+              <br>
+              <span style="font-size:13px;">置信度: <strong style="color:{(box.confidence > 0.5 ? '#27ae60' : '#e67e22')};">{box.confidence.toFixed(3)}</strong></span>
             </div>
           {/each}
 
-          <h4 style="margin-top:10px;">Class Probabilities</h4>
+          <h4 style="margin-top:12px;">类别概率</h4>
           <div class="class-list">
             {#each selectedCellClasses.slice(0, 10) as cls}
               <div class="class-row">
@@ -420,29 +412,31 @@
                   <div class="class-bar-fill"
                     style="width: {cls.probability * 100}%; background: {gridColors[cls.classIndex % gridColors.length]};"></div>
                 </div>
-                <span class="class-val">{cls.probability.toFixed(3)}</span>
+                <span class="class-val">{(cls.probability * 100).toFixed(1)}%</span>
               </div>
             {/each}
           </div>
         </div>
       {:else}
         <div class="cell-detail-panel">
-          <h4>Click a Grid Cell</h4>
-          <p style="font-size:12px;color:#888;">
-            Click on any grid cell in the {S}×{S} grid above to inspect its
-            bounding box predictions and class probabilities.
+          <h4>👆 点击网格单元格</h4>
+          <p style="font-size:14px;color:#777;line-height:1.6;">
+            在上方的 {S}×{S} 网格中点击任意单元格，查看其：
           </p>
+          <ul style="font-size:14px;color:#555;margin-top:6px;">
+            <li><strong>{B}</strong> 个边界框预测（坐标 + 置信度）</li>
+            <li><strong>{C}</strong> 个类别概率分布</li>
+            <li>NMS 前后的检测框对比</li>
+          </ul>
         </div>
       {/if}
 
-      <div class="stats-panel" style="margin-top:10px;">
-        <h4>How YOLO Works</h4>
-        <div style="font-size:12px;color:#555;line-height:1.5;">
-          <p>YOLO divides the input image into a <strong>{S}×{S}</strong> grid.</p>
-          <p>Each cell predicts <strong>{B}</strong> bounding boxes and
-          <strong>{C}</strong> class probabilities.</p>
-          <p>Output: <strong>{S}×{S}×{B*5+C}</strong> tensor
-          ({S}×{S}×{S*S*(B*5+C)} values).</p>
+      <div class="stats-panel">
+        <h4>YOLO 工作原理</h4>
+        <div style="font-size:14px;color:#555;line-height:1.6;">
+          <p>YOLO 将输入图像划分为 <strong>{S}×{S}</strong> 网格。</p>
+          <p>每个单元格预测 <strong>{B}</strong> 个边界框和 <strong>{C}</strong> 个类别概率。</p>
+          <p>输出: <strong>{S}×{S}×{B*5+C}</strong> 张量</p>
         </div>
       </div>
     </div>
